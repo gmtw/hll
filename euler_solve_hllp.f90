@@ -11,27 +11,27 @@ module globals
 !----------------------
 ! esto si se modifica
 !----------------------  
-  real, parameter :: tmax= 0.3            ! maximumn integration time
+  real, parameter :: tmax= 0.5            ! maximumn integration time
   integer, parameter :: nx=1000  
   ! define courant
-  integer, parameter :: sn = 300 !numero de capturas (snapshot) 
+  integer, parameter :: sn = 5 !numero de capturas (snapshot) 
   
   !   Here we set the extent of X and calculate $\Delta x$
   real, parameter :: xmax=1.0, dx=xmax/float(nx)
   real, parameter :: gamma=5./3.
 
-  real, parameter :: Co=0.9 !Courant number
+  !real, parameter :: Co=0.9 !Courant number
 
   real, parameter :: rhol=1.0
-  real, parameter :: vl=-19.59745
-  real, parameter :: pl=1000.0
+  real, parameter :: vl=0.75
+  real, parameter :: pl=1.
 
-  real, parameter :: rhor=1.0
-  real, parameter :: vr=-19.59745
-  real, parameter :: pr=0.01
+  real, parameter :: rhor=0.125
+  real, parameter :: vr=0.
+  real, parameter :: pr=0.1
  
   
-  real, parameter :: xc = 0.8
+  real, parameter :: xc = 0.3
 
 !----------------------
 ! esto no se modifica
@@ -46,7 +46,8 @@ end module globals
 !=======================================================================
 
 
-! main program
+
+!   main program
   program euler_lax
   use globals
   implicit none
@@ -81,6 +82,7 @@ end module globals
 
   stop
 end program euler_lax
+
 !=======================================================================
 ! generates initial condition
 
@@ -112,8 +114,6 @@ subroutine initconds(time, tprint, itprint)
       u(3,i)=(1.0/2.0)*u(2,i)*vr+pr/(gamma-1.)
     end if
   end do
-
-
 
   !   reset the counters and time to 0
   time=0.
@@ -157,7 +157,7 @@ subroutine courant(dt)
   implicit none
   real, intent(out) ::dt!out value
   ! Courant number =0.9
-  !real, parameter :: Co=0.8
+  real, parameter :: Co=0.8
   real :: rho, vx , P, cs
   integer :: i
 
@@ -216,7 +216,7 @@ subroutine ulax(dt,time)
 
 end subroutine ulax
 !=======================================================================
-! Obtain the fluxes F
+!Obtain the fluxes F
 
 subroutine fluxesLF(nx,nequ,gamma,u,f)
   !use globals
@@ -561,17 +561,6 @@ end subroutine RL
 !!      !print*,'u_r', u_r(1,31),'u_l', u_l(1,30)
 !!      print*,'======================fhll=================='
   
-
-
-
-
-
-
-    
-  
   return
 
   end subroutine fluxesHLL
-
-
-
