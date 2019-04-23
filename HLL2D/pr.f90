@@ -28,24 +28,30 @@
 !   **we can modify these values**
 !------------------------------------------------------------------------------
       integer, parameter :: nx=200, ny=200, neq=4
-      real, parameter :: xmax=6.0, dx=xmax/float(nx)
-      real, parameter :: ymax=6.0, dy=ymax/float(ny)
-      real, parameter :: gamma=5./3.
+      real, parameter :: xmax=6., dx=xmax/float(nx)
+      real, parameter :: ymax=6., dy=ymax/float(ny)
+      real, parameter :: gamma=4./3.
 
-      real, parameter :: tmax= 1.5      ! maximum integration time
-      real, parameter :: dtprint=tmax/20.       ! interval between outputs
+      real, parameter :: tmax= 2.0        ! maximum integration time
+      real, parameter :: dtprint=0.1       ! interval between outputs
 
-      real, parameter :: rhoin = 12.0
-      real, parameter :: rhoout = 1.0
-      real, parameter :: pin = 10.
-      real, parameter :: pout = 1.0
+      real, parameter :: rhoin = 10.0
+      real, parameter :: rhoout = 2.0 !density
+      real, parameter :: rholeft=30.0
+      real, parameter :: rhoright= 1.0
+
+      real, parameter :: pin = 10.0
+      real, parameter :: pout = 1.0   !pressure
+      real, parameter :: pleft=5.0
+      real, parameter :: pright=0.1
+
       real, parameter :: vxin = 0.0
       real, parameter :: vyin = 0.0
-      real, parameter :: vxout = 0.0
+      real, parameter :: vxout = 0.0    !velocity
       real, parameter :: vyout = 0.0
+      real, parameter :: xc = xmax/2.0
+      real, parameter :: yc = ymax/2.0
 
-      real, parameter :: xc = 3.
-      real, parameter :: yc = 3.
 
       real, parameter :: Co = 0.7
 
@@ -55,36 +61,14 @@
 ! 10.0 = Jet injection
 !--------------------------------------
       real, parameter :: bound=0.0
- 
-!--------------------------------------
-! Election of fluxes
-! Lax-Friederich = 1
-! Harten-Lax-van-Leer = 2
-!--------------------------------------
-     integer, parameter :: choose_f = 1
-!-----------------------------------------------------------------------------
-!Mode relativistic
-!Relatitivistic = 1
-!Newton = 0
-
-      integer, parameter :: relativity = 1
-!-----------------------------------------------------------------------------
-
-
 
 !------------------------------------------------------------------------------
 !   This is a vector that contains u(x,y) (do not touch)
 !------------------------------------------------------------------------------
-      real :: u(neq,0:nx+1,0:ny+1)
-
-!-----------------------------------------------------------------------------
-!   This varial help us to mode relativistic!
-
+      real :: u (neq,0:nx+1,0:ny+1)
       real :: qu(neq)
       real :: qp(neq)
       real :: qpp(neq,0:nx+1,0:ny+1)
-!-----------------------------------------------------------------------------
-
         end module globals
 !------------------------------------------------------------------------------
 ! End module globals
@@ -127,6 +111,7 @@
 
       end do
 
+      stop
       end program euler2D_lax
 !------------------------------------------------------------------------------
 ! end of main program module
@@ -152,64 +137,71 @@
 ! u(3,i,j) = vy(i,j)
 ! u(4,i,j) = etot(i,j) = eint + ekin = P/(gamma-1)
 !------------------------------------------------------------------------------
-    if(relativity==0)then
-        
-        do i=0,nx+1
-          do j=0,ny+1
-            x=float(i)*dx          ! obtain the position $x_i$
-            y=float(j)*dy          ! obtain the position $y_j$
-            rad=sqrt((x-xc)**2+(y-yc)**2)
-            if (rad < 2.0 ) then
-              u(1,i,j)=rhoin
-              u(2,i,j)=rhoin*vxin
-              u(3,i,j)=rhoin*vyin
-              u(4,i,j)=pin/(gamma-1.) + 0.5*u(2,i,j)*u(2,i,j)/u(1,i,j) + 0.5*u(3,i,j)*u(3,i,j)/u(1,i,j)          
-            else
-              u(1,i,j)=rhoout
-              u(2,i,j)=rhoout*vxout
-              u(3,i,j)=rhoout*vyout
-              u(4,i,j)=pout/(gamma-1.) + 0.5*u(2,i,j)*u(2,i,j)/u(1,i,j) + 0.5*u(3,i,j)*u(3,i,j)/u(1,i,j)
-            end if
+      do i=0,nx+1
+        do j=0,ny+1
+          x=float(i)*dx          ! obtain the position $x_i$
+          y=float(j)*dy          ! obtain the position $y_j$
+         rad=abs(sqrt((x-xc)**2+(y-yc)**2))
+
+          if (rad < 2.) then
+           
+            lorin=1/sqrt(1-(vxin**2+vyin**2))
+            hin=1.+gamma/(gamma-1.)*pin/rhoin
+           
+            u(1,i,j)=rhoin*lorin
+            u(2,i,j)=rhoin*vxin*lorin**2*hin
+            u(3,i,j)=rhoin*vyin*lorin**2*hin
+            u(4,i,j)=rhoin*lorin**2*hin-pin
+
+          else
+            lorout=1./sqrt(1.-(vxout**2+vyout**2))
+            hout=1.+gamma/(gamma-1.)*pout/rhoout
+
+            u(1,i,j)=rhoout*lorout
+            u(2,i,j)=rhoout*vxout*lorout**2*hout
+            u(3,i,j)=rhoout*vyout*lorout**2*hout
+            u(4,i,j)=rhoout*lorout**2*hout-pout
+
+         
+
+           end if
+          !------------------------------------------------
+         
+          ! if (i <= nx/8.0) then
+            
+          !   lorleft=1./sqrt(1.-(vxout**2+vyout**2))
+          !   hleft=1.+gamma/(gamma-1.)*pout/rholeft
+
+          !   u(1,i,j)=rholeft*lorleft
+          !   u(2,i,j)=rholeft*vxout*lorleft**2*hleft
+          !   u(3,i,j)=rholeft*vyout*lorleft**2*hleft
+          !   u(4,i,j)=rholeft*lorleft**2*hleft-pout
 
             
-          end do
+
+          ! else
+
+          !   lorright=1./sqrt(1.-(vxout**2+vyout**2))
+          !   hright=1.+gamma/(gamma-1.)*pout/rhoright
+
+          !   u(1,i,j)=rhoright*lorright
+          !   u(2,i,j)=rhoright*vxout*lorright**2*hright
+          !   u(3,i,j)=rhoright*vyout*lorright**2*hright
+          !   u(4,i,j)=rhoright*lorright**2*hright-pout
+
+          ! endif
+          !--------------------------------------------------------
+
+            ! lorout=1./sqrt(1.-(vxout**2+vyout**2))
+            ! hout=1.+gamma/(gamma-1.)*pout/((1.0/(rad**2))*rhoout)
+
+            ! u(1,i,j)=((1.0/(rad**2))*rhoout)*lorout
+            ! u(2,i,j)=((1.0/(rad**2))*rhoout)*vxout*lorout**2*hout
+            ! u(3,i,j)=((1.0/(rad**2))*rhoout)*vyout*lorout**2*hout
+            ! u(4,i,j)=((1.0/(rad**2))*rhoout)*lorout**2*hout-pout
+
         end do
-
-      elseif(relativity==1)then
-
-         do i=0,nx+1
-          do j=0,ny+1
-            x=float(i)*dx          ! obtain the position $x_i$
-            y=float(j)*dy          ! obtain the position $y_j$
-           rad=abs(sqrt((x-xc)**2+(y-yc)**2))
-
-            if (rad < 2.) then
-             
-              lorin=1/sqrt(1-(vxin**2+vyin**2))
-              hin=1.+gamma/(gamma-1.)*pin/rhoin
-             
-              u(1,i,j)=rhoin*lorin
-              u(2,i,j)=rhoin*vxin*lorin**2*hin
-              u(3,i,j)=rhoin*vyin*lorin**2*hin
-              u(4,i,j)=rhoin*lorin**2*hin-pin
-
-            else
-              lorout=1./sqrt(1.-(vxout**2+vyout**2))
-              hout=1.+gamma/(gamma-1.)*pout/rhoout
-
-              u(1,i,j)=rhoout*lorout
-              u(2,i,j)=rhoout*vxout*lorout**2*hout
-              u(3,i,j)=rhoout*vyout*lorout**2*hout
-              u(4,i,j)=rhoout*lorout**2*hout-pout
-
-           
-
-             end if
-            end do
-           end do
-
-
-    endif
+      end do
 
 !------------------------------------------------------------------------------
 ! end of the 2D circular blast initial condition
@@ -248,55 +240,31 @@
 ! writes the output datafiles (ascii)
 ! writes x, y, rho, vx, vy and P
 !------------------------------------------------------------------------------
-      if (relativity==0)then
+      do j=1,ny
+        do i=1,nx
+         ! rho=u(1,i,j)
+         ! vx=u(2,i,j)/rho
+         ! vy=u(3,i,j)/rho
+         ! P=(u(4,i,j)-0.5*rho*(vx**2)*(vy**2))*(gamma-1.)
+          qu(1) = u(1,i,j)
+          qu(2) = u(2,i,j)
+          qu(3) = u(3,i,j)
+          qu(4) = u(4,i,j)
 
-          do j=1,ny
-            do i=1,nx
-              rho=u(1,i,j)
-              vx=u(2,i,j)/rho
-              vy=u(3,i,j)/rho
-              P=(u(4,i,j)-0.5*rho*(vx**2)*(vy**2))*(gamma-1.)
-              write(10,'(7es12.5)') float(i)*dx,float(j)*dy,rho, vx, vy, P
-            end do
-            write(10,*)
-          end do
-        close(10)
+          call uprim(qu,qp)
 
+          qpp(:,i,j)=qp
 
-      elseif(relativity==1)then
-
-        do j=1,ny
-          do i=1,nx
-           ! rho=u(1,i,j)
-           ! vx=u(2,i,j)/rho
-           ! vy=u(3,i,j)/rho
-           ! P=(u(4,i,j)-0.5*rho*(vx**2)*(vy**2))*(gamma-1.)
-            qu(1) = u(1,i,j)
-            qu(2) = u(2,i,j)
-            qu(3) = u(3,i,j)
-            qu(4) = u(4,i,j)
-
-            call uprim(qu,qp)
-
-            qpp(:,i,j)=qp
-
-            rho=qpp(1,i,j)
-            vx=qpp(2,i,j)
-            vy=qpp(3,i,j)
-            P=qpp(4,i,j)
-            
-            write(10,'(7es12.5)') float(i)*dx,float(j)*dy,rho, vx, vy, P
-          end do
-          write(10,*)
+          rho=qpp(1,i,j)
+          vx=qpp(2,i,j)
+          vy=qpp(3,i,j)
+          P=qpp(4,i,j)
+          
+          write(10,'(7es12.5)') float(i)*dx,float(j)*dy,rho, vx, vy, P
         end do
+        write(10,*)
+      end do
       close(10)
-
-
-
-  
-
-      endif
-
 
       return
       end subroutine output
@@ -314,62 +282,43 @@
       implicit none
       real, intent(out) ::dt
       real :: rho, vx, vy, P, cs
-      integer :: i,j
+      integer :: i,j,itprint
 
 !------------------------------------------------------------------------------
 ! Calculate the CFL criterium
 !------------------------------------------------------------------------------
       dt=1E30
+      do i=0,nx+1
+        do j=0,ny+1
+         ! rho=u(1,i,j)
+         ! vx=u(2,i,j)/rho
+         ! vy=u(3,i,j)/rho
+         ! P=(u(4,i,j)-0.5*rho*(vx**2+vy**2))*(gamma-1.)
+          qu(1) = u(1,i,j)
+          qu(2) = u(2,i,j)
+          qu(3) = u(3,i,j)
+          qu(4) = u(4,i,j)
 
-      if(relativity==0)then
-          do i=0,nx+1
-            do j=0,ny+1
-              rho=u(1,i,j)
-              vx=u(2,i,j)/rho
-              vy=u(3,i,j)/rho
-              P=(u(4,i,j)-0.5*rho*(vx**2+vy**2))*(gamma-1.)
-              cs=sqrt(gamma*P/rho)
-              dt=min( dt,Co*dx/(abs(vx)+cs) )
-              dt=min( dt,Co*dy/(abs(vy)+cs) )
+          call uprim(qu,qp)
 
-            end do
-          end do
+          qpp(:,i,j)=qp
+          
+          rho=qpp(1,i,j)
+          vx=qpp(2,i,j)
+          vy=qpp(3,i,j)
+          P=qpp(4,i,j)
 
-      elseif(relativity==1)then
-          do i=0,nx+1
-            do j=0,ny+1
-             ! rho=u(1,i,j)
-             ! vx=u(2,i,j)/rho
-             ! vy=u(3,i,j)/rho
-             ! P=(u(4,i,j)-0.5*rho*(vx**2+vy**2))*(gamma-1.)
-              qu(1) = u(1,i,j)
-              qu(2) = u(2,i,j)
-              qu(3) = u(3,i,j)
-              qu(4) = u(4,i,j)
-
-              call uprim(qu,qp)
-
-              qpp(:,i,j)=qp
-              
-              rho=qpp(1,i,j)
-              vx=qpp(2,i,j)
-              vy=qpp(3,i,j)
-              P=qpp(4,i,j)
-
-              cs=sqrt(gamma*P/rho)
-              dt=min( dt,Co*dx/(abs(vx)+cs) )
-              dt=min( dt,Co*dy/(abs(vy)+cs) )
-              
-              ! print*, dt
-              
-    !          print*, "entra p" ,rhoout , vxout , vyout , pout
-    !          print*, "sale  p" , qpp(1,i,j) , qpp(2,i,j) , qpp(3,i,j) , qpp(4,i,j)  
+          cs=sqrt(gamma*P/rho)
+          dt=min( dt,Co*dx/(abs(vx)+cs) )
+          dt=min( dt,Co*dy/(abs(vy)+cs) )
+          
+          ! print*, dt
+          
+!          print*, "entra p" ,rhoout , vxout , vyout , pout
+!          print*, "sale  p" , qpp(1,i,j) , qpp(2,i,j) , qpp(3,i,j) , qpp(4,i,j)  
 
         end do
       end do
-
-
-        endif
 
       return
       end subroutine courant
@@ -387,16 +336,13 @@
       implicit none
       real, intent(in) :: dt, time
       real :: up(neq,0:nx+1,0:ny+1), f(neq,0:nx+1,0:ny+1), g(neq,0:nx+1,0:ny+1)
-      real :: fhll(neq,0:nx+1,0:ny+1), ghll(neq,0:nx+1,0:ny+1)
       real :: dtx, dty
       integer :: i,j
 
 !------------------------------------------------------------------------------
 ! obtain the fluxes
 !------------------------------------------------------------------------------
- 
-
-      
+      call fluxes(nx,ny,neq,gamma,u,f,g,bound)
 
 !------------------------------------------------------------------------------
 !   Here is the Lax method, notice that the values at the extremes can not be
@@ -404,34 +350,16 @@
 !------------------------------------------------------------------------------
       dtx=dt/dx
       dty=dt/dy
-      !print*,u(1,1,1), u(2,1,1),u(3,1,1),u(4,1,1)
 
-      if (choose_f .eq. 1) then
-          call fluxes(nx,ny,neq,gamma,u,f,g,bound)
-	      
-	     
       do i=1,nx
         do j=1,ny
           up(:,i,j)=0.25*( u(:,i-1,j)+u(:,i+1,j)+u(:,i,j-1)+u(:,i,j+1) ) &
                          -dtx*0.5*(f(:,i+1,j)-f(:,i-1,j) ) &
                          -dty*0.5*(g(:,i,j+1)-g(:,i,j-1) )
 
-           end do
-      	 end do
 
-      elseif(choose_f .eq. 2)then
-        
-        call fluxesHLL(fhll, ghll)
-      
-      	do i=1,nx
-	        do j=1,ny
-
-             up(:,i,j) = u(:,i,j) + 0.5*dtx*(fhll(:,i-1,j)-fhll(:,i+1,j))      &
-                         + 0.5*dty*(ghll(:,i,j-1)-ghll(:,i,j+1))
-        	end do
-      	  end do
-
-      endif
+        end do
+      end do
 
 !------------------------------------------------------------------------------
 !   Boundary conditions to the U^n+1
@@ -441,7 +369,13 @@
 !   copy the up to the u
 !------------------------------------------------------------------------------
       u(:,:,:)=up(:,:,:)
-      !print*, dt, u(1,1,1), u(2,1,1),u(3,1,1),u(4,1,1)
+     ! print*,u
+
+ 
+
+       ! print*, "entra p" ,rhoout , vxout , vyout , pout
+      ! print*, "sale  p" , qpp(1,i,j) , qpp(2,i,j) , qpp(3,i,j) , qpp(4,i,j)  
+   
 
       return
       end subroutine ulax
@@ -455,39 +389,17 @@
 ! Calculation of the fluxes module
 !------------------------------------------------------------------------------
       subroutine fluxes(nx,ny,neq,gamma,u,f,g,bound)
-      use globals, only : qu, qpp,qp, relativity
+      use globals, only : qu, qpp,qp
       implicit none
       integer, intent(in) :: nx,ny,neq
       real, intent(in) :: gamma
       real, intent(in) :: bound
       real, intent(in) :: u(neq,0:nx+1,0:ny+1)
+     ! real :: qpp(neq,0:nx+1,0:ny+1),qu(1),q(2) ,qp
       real, intent(out) :: f(neq,0:nx+1,0:ny+1), g(neq,0:nx+1,0:ny+1)
       integer :: i, j
-      real :: rho, vx, vy, P, lor, h
+      real :: rho, vx, vy, P, lor,h
 
-      if(relativity==0)then
-          do i=1,nx
-            do j=1,ny
-              rho=u(1,i,j)
-              vx=u(2,i,j)/rho
-              vy=u(3,i,j)/rho
-              P=(u(4,i,j)-0.5*rho*(vx**2+vy**2))*(gamma-1.)
-
-              f(1,i,j)=rho*vx
-              f(2,i,j)=rho*vx*vx+P
-              f(3,i,j)=rho*vx*vy
-              f(4,i,j)=vx*(u(4,i,j)+P)
-
-              g(1,i,j)=rho*vy
-              g(2,i,j)=rho*vx*vy
-              g(3,i,j)=rho*vy*vy+P
-              g(4,i,j)=vy*(u(4,i,j)+P)
-
-            end do
-          end do
-
-        elseif(relativity==1)then
-          
       do i=0,nx+1
         do j=0,ny+1
           
@@ -528,8 +440,6 @@
         end do
       end do
 
-      endif
-
       return
       end subroutine fluxes
 !------------------------------------------------------------------------------
@@ -547,17 +457,17 @@
       real, intent(in) :: bound
       real, intent(out) ::u(neq,0:nx+1,0:ny+1)
       real, intent(in) :: time,gamma
-      integer :: j , i
-      real :: rhoj ,vj, vxj,vyj, Pj, Tauj , rhoi, vi, Pi, Taui, theta
+      integer :: i,j
+      real :: rhojet , vjet, Pjet, Taujet , rhoijet, theta, lorjet, hjet, vxjet, vyjet
 
 !------------------------------------------------------------------------------
 ! Periodic or open boundaries, or your own boundary condition
 !------------------------------------------------------------------------------
 
-        ! u(:,0   ,:)=u(:,1 ,:)
-        ! u(:,nx+1,:)=u(:,nx,:)
-        ! u(:,:,0   )=u(:,:,1 )
-        ! u(:,:,ny+1)=u(:,:,ny)
+        u(:,0   ,:)=u(:,1 ,:)
+        u(:,nx+1,:)=u(:,nx,:)
+        u(:,:,0   )=u(:,:,1 )
+        u(:,:,ny+1)=u(:,:,ny)
 
 !---------------------------------------
 
@@ -572,10 +482,9 @@
 
         if(bound.eq.1.)then
            u(1,0   ,:)=u(1,1 ,:)
-           u(2,0   ,:)=-u(2,2 ,:)  !-u(2,1 ,:) si se quiere ref en x=0
+           u(2,0   ,:)=-u(2,1 ,:)  !-u(2,1 ,:) si se quiere ref en x=0
            u(3,0   ,:)=u(3,1 ,:)
            u(4,0   ,:)=u(4,1 ,:)
-
          end if
 
 !---------------------------------------
@@ -661,61 +570,62 @@
 !  Jet injection
 !---------------------------------------
          if(bound.eq.10.)then
-           rhoj=9.5
-           Tauj=100.2
-           vj=0.5 !+ 0.3*sin(2*3.1416*time/Tauj)
-           vxj=0.99
-           vyj=0.1
-           Pj=0.1     !0.1
+           rhojet=40.5
+           Taujet=0.5
+           vxjet=0.9909 !+ 0.3*sin(2*3.1416*time/Tauj)
+           vyjet=0.123
+           Pjet=0.1     !0.1
            theta=50
 
+          do j=0,ny
+           
+            lorjet=1/sqrt(1-(vxjet**2+vyjet**2))
+            hjet=1.+gamma/(gamma-1.)*pjet/rhojet
 
-           u(:,0   ,:)=u(:,1 ,:)
-           u(:,nx+1,:)=u(:,nx,:)
-           u(:,:,0   )=u(:,:,1 )
-           u(:,:,ny+1)=u(:,:,ny)
+           if(abs(j-nx/2) <= nx/150) then
+            u(1,0,j)=rhojet*lorjet
+              
+              if((j-nx/2).ge.0)then
+                u(2,0,j)=1.0*rhojet*vxjet*lorjet**2*hjet!*abs(COS(2*3.14*time/Taujet))
 
-         do j=0,ny
-            if (abs(j-ny/2) <= ny/20)  then
-              u(1,0,j)=rhoj
-              u(2,0,j)=rhoj*vxj
-              if((j-ny/2).ge.0)then
-                u(3,0,j)=rhoj*vyj
+                u(3,0,j)=1.0*rhojet*vyjet*lorjet**2*hjet!*COS(2*3.14*time/Taujet)
               else
-                u(3,0,j)=rhoj*vyj
+                u(2,0,j)=1.0*rhojet*vxjet*lorjet**2*hjet!*abs(COS(2*3.14*time/Taujet))
+
+                u(3,0,j)=-1.0*rhojet*vyjet*lorjet**2*hjet!*COS(2*3.14*time/Taujet)
               end if
-              u(4,0,j)=0.5*rhoj*(vxj**2+vyj**2) + Pj/(gamma-1.)
-            end if
+            
+            !u(3,0,j)=rhojet*vyjet*lorjet**2*hjet
+
+            u(4,0,j)=rhojet*lorjet**2*hjet-pjet
+           end if
+
           end do
+!          do j=0,ny
+!             if (abs(j-ny/2) <= ny/20)  then
+!               u(1,0,j)=rhoj
+!               u(2,0,j)=rhoj*vj
+!               if((j-ny/2).ge.0)then
+!                 u(3,0,j)=0.5*rhoj*vj
+!               else
+!                 u(3,0,j)=-0.5*rhoj*vj
+!               end if
+!               u(4,0,j)=0.5*rhoj*vj**2 + Pj/(gamma-1.)
+!             end if
+!           end do
 
-            !u(:,0   ,:)=u(:,1 ,:)
-            !u(:,nx+1,:)=u(:,nx,:)
-            !u(:,:,0   )=u(:,:,1 )
-            !u(:,:,ny+1)=u(:,:,ny)
-
-          ! do j=1,nx
+          ! do j=0,nx
           !    if (abs(j-nx/2) <= nx/20)  then
           !      u(1,j,0)=rhoj
-               
           !      if((j-nx/2).ge.0)then
-               
-          !        u(2,j,0)= -rhoj*vxj     !*COS(45*3.14*time/180)
-               
+          !        u(2,j,0)= 0.5*rhoj*vj     !*COS(45*3.14*time/180)
           !      else
-          !        u(2,j,0)=  rhoj*vxj   !*COS(45*3.14*time/180)
-               
+          !        u(2,j,0)=-0.5*rhoj*vj   !*COS(45*3.14*time/180)
           !      end if
-               
-
-          !      u(3,j,0)= rhoj*vyj   !*sin(45*3.14*time/180)
-               
-          !      u(4,j,0)=0.5*rhoj*(vxj**2+vyj**2) + Pj/(gamma-1.)
+          !      u(3,j,0)=1.0*rhoj*vj   !*sin(45*3.14*time/180)
+          !      u(4,j,0)=0.5*rhoj*vj**2 + Pj/(gamma-1.)
           !    end if
           !  end do
-
-          !   u(:,nx+1,:)=u(:,nx,:)
-            !u(:,:,0   )=u(:,:,1 )
-            !u(:,:,ny+1)=u(:,:,ny)                                                                                                                                                                                                                                                                                                         
 
 
          end if
@@ -727,277 +637,15 @@
 end subroutine boundaries
 !=======================================================================
 
-subroutine RL(nx,ny, neq, gamma, u, rho_l,rho_d, rho_r,rho_u, vx_l,vx_d, vx_r,vx_u, &
-  vy_l,vy_r,vy_u, vy_d,P_l,P_d, P_r,P_u)
-  !Este modulo, digamos es para seleccionar, las densidades, velocidades y presiones tanto de izquierda como de derecha
-  !Tambien sirve como desacoplamiento para mis primitivas
-  implicit none
-  integer, intent(in) :: nx,ny,neq
-  real, intent(in) :: gamma
-  real, intent(in) :: u(neq,0:nx+1,0:ny+1)
-  real, intent(out):: rho_l(0:nx+1,0:ny+1), rho_r(0:nx+1,0:ny+1),rho_u(0:nx+1,0:ny+1),rho_d(0:nx+1,0:ny+1)
-  real, intent(out):: vx_l(0:nx+1,0:ny+1), vx_r(0:nx+1,0:ny+1), vx_u(0:nx+1,0:ny+1), vx_d(0:nx+1,0:ny+1)
-  real, intent(out):: vy_l(0:nx+1,0:ny+1), vy_r(0:nx+1,0:ny+1), vy_u(0:nx+1,0:ny+1), vy_d(0:nx+1,0:ny+1)
-  real, intent(out):: P_l(0:nx+1, 0:ny+1), P_r(0:nx+1, 0:ny+1), P_u(0:nx+1,0:ny+1), P_d(0:nx+1,0:ny+1)
-  integer :: i,j
 
-
- 
-!Tuve que convertir mis variables primitivas en vectores para tener un mejor control de lo que toca derecha a izquirda,
-! no se si es lo mej
-! notar que corre de 0 a nx 
-  do i=1,nx
-    do j=1,ny  
-    rho_l(i,j)= u(1,i-1,j)
-    vx_l(i,j) = u(2,i-1,j)/u(1,i-1,j)
-    vy_l(i,j) = u(3,i-1, j)/u(1,i-1,j)
-    P_l(i,j)  = (u(4,i-1,j)-0.5*rho_l(i,j)*(vx_l(i,j)**2+vy_l(i,j)**2))*(gamma-1.)
-
-    rho_d(i,j)= u(1,i,j-1)
-    vx_d(i,j) = u(2,i,j-1)/u(1,i,j-1)
-    vy_d(i,j) = u(3,i,j-1)/u(1,i,j-1)
-    P_d(i,j)  = (u(4,i,j-1)-0.5*rho_d(i,j)*(vx_d(i,j)**2+vy_d(i,j)**2))*(gamma-1.)
-
-    
-
-    rho_r(i,j)= u(1,i+1,j)
-    vx_r(i,j) = u(2,i+1,j)/u(1,i+1,j)
-    vy_r(i,j) = u(3,i+1,j)/u(1,i+1,j)
-    P_r(i,j)  = (u(4,i+1,j)-0.5*rho_r(i,j)*(vx_r(i,j)**2+vy_r(i,j)**2))*(gamma-1.)
-
-    rho_u(i,j)= u(1,i,j+1)
-    vx_u(i,j) = u(2,i,j+1)/u(1,i,j+1)
-    vy_u(i,j) = u(3,i, j+1)/u(1,i,j+1)
-    P_u(i,j)  = (u(4,i,j+1)-0.5*rho_u(i,j)*(vx_u(i,j)**2+vy_u(i,j)**2))*(gamma-1.)
-    
-    end do
-  end do
-  
-
-  
-  return
-
-end subroutine RL
 !=======================================================================
 
-
- !calculate the wave speeds
-   subroutine wavespeeds(s_l,s_d, s_r,s_u,rho_l,rho_d, rho_r,rho_u, vx_l,vx_d, vx_r,vx_u, &
-  vy_l,vy_r,vy_u, vy_d,P_l,P_d, P_r,P_u )
-    ! Este modulo calcula las velocidadesd de la onda
-     use globals
-     implicit none
-!    integer, intent(in)::nx,neq  
-    real ::s_l(0:nx+1,0:ny+1),s_r(0:nx+1,0:ny+1), s_d(0:nx+1,0:ny+1), s_u(0:nx+1,0:ny+1) !Regresa las velocidades de la onda (s_l, s_r)
-    
-    real :: rho_l(0:nx+1,0:ny+1), rho_r(0:nx+1,0:ny+1),rho_u(0:nx+1,0:ny+1),rho_d(0:nx+1,0:ny+1)
-    real :: vx_l(0:nx+1,0:ny+1), vx_r(0:nx+1,0:ny+1), vx_u(0:nx+1,0:ny+1), vx_d(0:nx+1,0:ny+1)
-    real :: vy_l(0:nx+1,0:ny+1), vy_r(0:nx+1,0:ny+1), vy_u(0:nx+1,0:ny+1), vy_d(0:nx+1,0:ny+1)
-    real :: P_l(0:nx+1, 0:ny+1), P_r(0:nx+1, 0:ny+1), P_u(0:nx+1,0:ny+1), P_d(0:nx+1,0:ny+1)
-    
-    real:: cs_l(0:nx+1,0:ny+1), cs_r(0:nx+1,0:ny+1), cs_u(0:nx+1,0:ny+1), cs_d(0:nx+1,0:ny+1) !velocidades del sonido
-    integer:: i,j
- 
- ! bucle para crear las velocidades del sonido tanto de izquierda como de derecha
-  do i=1,nx
-    do j=1,ny
-      cs_l(i,j)=sqrt(gamma*P_l(i,j)/rho_l(i,j))  
-      cs_d(i,j)=sqrt(gamma*P_d(i,j)/rho_d(i,j))
-
-      cs_r(i,j)=sqrt(gamma*P_r(i,j)/rho_r(i,j))
-      cs_u(i,j)=sqrt(gamma*P_u(i,j)/rho_u(i,j))
-    end do
-  end do
-
-  
-
- 
-
-  !Este bucle calcula las velocidades de las ondas 
-  do i=1,nx
-    do j=1,ny
-      s_l(i,j)=vx_l(i,j)-cs_l(i,j) !velocidad izquierda - velocidad del sonido izquierda
-      s_d(i,j)=vy_d(i,j)-cs_d(i,j)
-
-      s_r(i,j)=vx_r(i,j)+cs_r(i,j) !velocidad derecha + velocidad del sonido derecha
-      s_u(i,j)=vy_u(i,j)+cs_u(i,j)
-    end do
-  end do
-
-  
-
-
-  
-  return
-   end subroutine wavespeeds
-
-
-!    ! ! !=======================================================================
-   subroutine fluxesHLL(fhll, ghll)
-!     !Este modulo calcula los flujos hll
-      use globals
-     implicit none
-!     real, intent(in) :: time
-    
-     real, intent(out)::fhll(neq,0:nx+1,0:ny+1), ghll(neq,0:nx+1,0:ny+1)! esta es la variable que se obtiene y va para la subrutina ulax
-
-     real :: rho_l(0:nx+1,0:ny+1), rho_r(0:nx+1,0:ny+1),rho_u(0:nx+1,0:ny+1),rho_d(0:nx+1,0:ny+1)
-     real :: vx_l(0:nx+1,0:ny+1), vx_r(0:nx+1,0:ny+1), vx_u(0:nx+1,0:ny+1), vx_d(0:nx+1,0:ny+1)
-     real :: vy_l(0:nx+1,0:ny+1), vy_r(0:nx+1,0:ny+1), vy_u(0:nx+1,0:ny+1), vy_d(0:nx+1,0:ny+1)
-     real :: P_l(0:nx+1, 0:ny+1), P_r(0:nx+1, 0:ny+1), P_u(0:nx+1,0:ny+1), P_d(0:nx+1,0:ny+1)
-
-     real ::s_l(0:nx+1,0:ny+1),s_r(0:nx+1,0:ny+1), s_d(0:nx+1,0:ny+1), s_u(0:nx+1,0:ny+1)
-    
-     
-
-     real :: f_l(neq, 0:nx+1,0:ny+1), f_r(neq,0:nx+1,0:ny+1), u_l(neq,0:nx+1,0:ny+1), u_r(neq,0:nx+1,0:ny+1)
-     real :: g_d(neq, 0:nx+1,0:ny+1), g_u(neq,0:nx+1,0:ny+1), u_d(neq,0:nx+1,0:ny+1), u_u(neq,0:nx+1,0:ny+1)
-
-     integer :: i,j
-
-     call RL(nx,ny, neq, gamma, u, rho_l,rho_d, rho_r,rho_u, vx_l,vx_d, vx_r,vx_u, &
-  vy_l,vy_r,vy_u, vy_d,P_l,P_d, P_r,P_u)
-
-     call wavespeeds(s_l,s_d, s_r,s_u,rho_l,rho_d, rho_r,rho_u, vx_l,vx_d, vx_r,vx_u, &
-  vy_l,vy_r,vy_u, vy_d,P_l,P_d, P_r,P_u )
-
-    
-!       !igual calculamos los flujos y conservadas de lado derecho e izquierdo
-   do i=1,nx
-    do j=1,ny
-
-       u_l(1,i,j) = rho_l(i,j)
-       u_l(2,i,j) = rho_l(i,j)*vx_l(i,j)
-       u_l(3,i,j) = rho_l(i,j)*vy_l(i,j)
-       u_l(4,i,j) = 0.5*rho_l(i,j)*(vx_l(i,j)**2+vy_l(i,j)**2)+P_l(i,j)/(gamma-1.)
-
-
-       u_d(1,i,j) = rho_d(i,j)
-       u_d(2,i,j) = rho_d(i,j)*vx_d(i,j)
-       u_d(3,i,j) = rho_d(i,j)*vy_d(i,j)
-       u_d(4,i,j) = 0.5*rho_d(i,j)*(vx_d(i,j)**2+vy_d(i,j)**2)+P_d(i,j)/(gamma-1.)
-
-
-       u_r(1,i,j) = rho_r(i,j)
-       u_r(2,i,j) = rho_r(i,j)*vx_r(i,j)
-       u_r(3,i,j) = rho_r(i,j)*vy_r(i,j)
-       u_r(4,i,j) = 0.5*rho_r(i,j)*(vx_r(i,j)**2+vy_r(i,j)**2)+P_r(i,j)/(gamma-1.)
-
-
-       u_u(1,i,j) = rho_u(i,j)
-       u_u(2,i,j) = rho_u(i,j)*vx_u(i,j)
-       u_u(3,i,j) = rho_u(i,j)*vy_u(i,j)
-       u_u(4,i,j) = 0.5*rho_u(i,j)*(vx_u(i,j)**2+vy_u(i,j)**2)+P_u(i,j)/(gamma-1.)
-
-      
-
-
-!========================================================
-
-       f_l(1,i,j) = rho_l(i,j)*vx_l(i,j)
-       f_l(2,i,j) = rho_l(i,j)*vx_l(i,j)**2+P_l(i,j)
-       f_l(3,i,j) = rho_l(i,j)*vx_l(i,j)*vy_l(i,j)
-       f_l(4,i,j) = vx_l(i,j)*(u_l(4,i,j)+P_l(i,j))
-
-       
-
-       f_r(1,i,j) = rho_r(i,j)*vx_r(i,j)
-       f_r(2,i,j) = rho_r(i,j)*vx_r(i,j)**2+P_r(i,j)
-       f_r(3,i,j) = rho_r(i,j)*vx_r(i,j)*vy_r(i,j)
-       f_r(4,i,j) = vx_r(i,j)*(u_r(4,i,j)+P_r(i,j))
-
-
-       g_d(1,i,j) = rho_d(i,j)*vy_d(i,j)
-       g_d(2,i,j) = rho_d(i,j)*vx_d(i,j)*vy_d(i,j)
-       g_d(3,i,j) = rho_d(i,j)*vy_d(i,j)**2 + P_d(i,j)
-       g_d(4,i,j) = vy_d(i,j)*(u_d(4,i,j)+P_d(i,j))
-
-
-       g_u(1,i,j) = rho_u(i,j)*vy_u(i,j)
-       g_u(2,i,j) = rho_u(i,j)*vx_u(i,j)*vy_u(i,j)
-       g_u(3,i,j) = rho_u(i,j)*vy_u(i,j)**2 + P_u(i,j)
-       g_u(4,i,j) = vy_u(i,j)*(u_u(4,i,j)+P_u(i,j))
-
-!      
-!       ! Estas conservadas nos sirven para calcular el fhll
-       
-
-!       
-    end do
-  end do
-
-
-     do i=1,nx
-        do j=1,ny
-
-           
-          if (0 .le. s_l(i,j)) then !less or equal 0<=sl
-            fhll(:,i,j)=f_l(:, i,j)
-
-        
-      
-
-          else if (s_l(i,j) .le. 0 .and. 0 .le. s_r(i,j)) then !sl<=0<=sr
-        
-            fhll(:,i,j)=(s_r(i,j)*f_l(:,i,j)-s_l(i,j)*f_r(:,i,j)+s_l(i,j)*s_r(i,j)*(u_r(:,i,j)-u_l(:,i,j)))/&
-            (s_r(i,j)-s_l(i,j))
-
-      
-          else if (s_r(i,j) .le. 0) then !sr<=0
-              fhll(:,i,j)=f_r(:,i,j)
-
-          endif
-
-          
-
-          if(0 .le. s_d(i,j)) then
-            ghll(:,i,j)= g_d(:,i,j)
-
-
-           else if(s_d(i,j) .le. 0 .and. 0 .le. s_u(i,j)) then
-
-
-            ghll(:,i,j)=(s_u(i,j)*g_d(:,i,j)-s_d(i,j)*g_u(:,i,j)+s_d(i,j)*s_u(i,j)*(u_u(:,i,j)-u_d(:,i,j)))/&
-            (s_u(i,j)-s_d(i,j))
-
-
-          else if(s_u(i,j) .le. 0) then
-              ghll(:,i,j) = g_u(:,i,j)
-
-
-          endif
-        end do
-     end do
-
-    
-
-
-   
-   fhll(:,nx+1,:)=fhll(:,nx,:)
-   fhll(:,0,:)=fhll(:,1,:)  
-   fhll(:,:,ny+1)=fhll(:,:,ny)
-   fhll(:,:,0)=fhll(:,:,1)
-
-   ghll(:,nx+1,:)=ghll(:,nx,:)
-   ghll(:,0,:)=ghll(:,1,:)
-   ghll(:,:,ny+1)=ghll(:,:,ny)
-   ghll(:,:,0)=ghll(:,:,1)
-  
-
-
-  
-  
-   return
-
-   end subroutine fluxesHLL
-!------------------------------------------------------------
-
-   subroutine uprim(qu,qp)
+subroutine uprim(qu,qp)
 
 !    use parameters, only : neq, gamma
      use globals, only : neq, gamma
     implicit none
-    real :: qu(neq), qp(neq) ! qp Devuelve las primitivas
+    real :: qu(neq), qp(neq)
     real :: w, m2, lor
     real :: u2, alpha, chi
 
@@ -1037,7 +685,7 @@ end subroutine RL
 !    use parameters, only : neq, gamma
     use globals , only : neq, gamma
     implicit none
-   ! real, intent(in) :: qu(neq)
+!    real, intent(in) :: qu(neq)
     real, intent(in)  :: m2
     real, intent(out) :: w
     real, parameter :: eps = 1d-10
@@ -1045,15 +693,13 @@ end subroutine RL
     real :: w0, dpdw, f, dfdw, pg, dv2dw, dchidw, drhodw, qu(neq)
     integer :: k
 
-    !print*, qu(4)**2, m2+qu(1)**2, qu(4)
-
-    if(qu(4)**2 .lt. m2+qu(1)**2 .or. qu(4).le. 0.0) then !.lt. -> '<'; .le. -> '<=='
+    if(qu(4)**2.lt.m2+qu(1)**2.or.qu(4).le.0.0) then
       print*,'error in newrap'
       stop
     end if
 
     a = 3.0;   b = 2.0 * (-qu(4));   c = m2
-    if(b**2-a*c .lt. 0.0) then
+    if(b**2-a*c.lt.0.0) then
        print*,'b**2-a*c<0'
        stop
     end if
@@ -1068,7 +714,7 @@ end subroutine RL
 
       u2  = alpha/(1.0-alpha)
 
-      if(u2 .lt. 0.0) then
+      if(u2.lt.0.0) then
         print*,'u2<0cc'
         print*,qu
         stop
@@ -1085,7 +731,7 @@ end subroutine RL
 
       f = w - pg - qu(4)  ! f(w) = 0
 
-      if(abs(f) .lt. eps) return
+      if(abs(f).lt.eps) return
 
       dv2dw  = lor/w**3*m2
       dchidw = 1.0/lor**2 + dv2dw*(qu(1)+2.0*lor*chi)
@@ -1104,10 +750,12 @@ end subroutine RL
 
     end do
 
-    if(mu .gt. 0.1) then
+    if(mu.gt.0.1) then
       mu = mu/2.0
       goto 100
     end if
 
   end subroutine newrap
 !------------------------------------------------------------------------------!
+
+
