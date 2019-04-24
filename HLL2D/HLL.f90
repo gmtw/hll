@@ -28,11 +28,11 @@
 !   **we can modify these values**
 !------------------------------------------------------------------------------
       integer, parameter :: nx=200, ny=200, neq=4
-      real, parameter :: xmax=6.0, dx=xmax/float(nx)
-      real, parameter :: ymax=6.0, dy=ymax/float(ny)
-      real, parameter :: gamma=5./3.
+      real, parameter :: xmax=3.0, dx=xmax/float(nx)
+      real, parameter :: ymax=3.0, dy=ymax/float(ny)
+      real, parameter :: gamma=4./3.
 
-      real, parameter :: tmax= 1.5      ! maximum integration time
+      real, parameter :: tmax= 7.     ! maximum integration time
       real, parameter :: dtprint=tmax/20.       ! interval between outputs
 
       real, parameter :: rhoin = 12.0
@@ -54,7 +54,7 @@
 ! 0.0 = open boundary conditions
 ! 10.0 = Jet injection
 !--------------------------------------
-      real, parameter :: bound=0.0
+      real, parameter :: bound=10.0
  
 !--------------------------------------
 ! Election of fluxes
@@ -64,7 +64,7 @@
      integer, parameter :: choose_f = 1
 !-----------------------------------------------------------------------------
 !Mode relativistic
-!Relatitivistic = 1
+!Relativistic = 1
 !Newton = 0
 
       integer, parameter :: relativity = 1
@@ -159,7 +159,7 @@
             x=float(i)*dx          ! obtain the position $x_i$
             y=float(j)*dy          ! obtain the position $y_j$
             rad=sqrt((x-xc)**2+(y-yc)**2)
-            if (rad < 2.0 ) then
+            if (rad < 0. ) then
               u(1,i,j)=rhoin
               u(2,i,j)=rhoin*vxin
               u(3,i,j)=rhoin*vyin
@@ -183,7 +183,7 @@
             y=float(j)*dy          ! obtain the position $y_j$
            rad=abs(sqrt((x-xc)**2+(y-yc)**2))
 
-            if (rad < 2.) then
+            if (rad < 0.) then
              
               lorin=1/sqrt(1-(vxin**2+vyin**2))
               hin=1.+gamma/(gamma-1.)*pin/rhoin
@@ -360,11 +360,7 @@
               dt=min( dt,Co*dx/(abs(vx)+cs) )
               dt=min( dt,Co*dy/(abs(vy)+cs) )
               
-              ! print*, dt
               
-    !          print*, "entra p" ,rhoout , vxout , vyout , pout
-    !          print*, "sale  p" , qpp(1,i,j) , qpp(2,i,j) , qpp(3,i,j) , qpp(4,i,j)  
-
         end do
       end do
 
@@ -488,45 +484,42 @@
 
         elseif(relativity==1)then
           
-      do i=0,nx+1
-        do j=0,ny+1
-          
+          do i=0,nx+1
+            do j=0,ny+1
+              
 
-          !rho=u(1,i,j)
-          !vx=u(2,i,j)/rho
-          !vy=u(3,i,j)/rho
-          !P=(u(4,i,j)-0.5*rho*(vx**2+vy**2))*(gamma-1.)
-          qu(1) = u(1,i,j)
-          qu(2) = u(2,i,j)
-          qu(3) = u(3,i,j)
-          qu(4) = u(4,i,j)
+              
+              qu(1) = u(1,i,j)
+              qu(2) = u(2,i,j)
+              qu(3) = u(3,i,j)
+              qu(4) = u(4,i,j)
 
-          call uprim(qu,qp)
+              call uprim(qu,qp)
 
-          qpp(:,i,j)=qp
+              qpp(:,i,j)=qp
 
-          rho=qpp(1,i,j)
-          vx= qpp(2,i,j)
-          vy= qpp(3,i,j)
-          P= qpp(4,i,j)
+              rho=qpp(1,i,j)
+              vx= qpp(2,i,j)
+              vy= qpp(3,i,j)
+              P= qpp(4,i,j)
 
-          lor=1/sqrt(1-(vx**2+vy**2))
-          h=1.+gamma/(gamma-1.)*P/rho
-          
-          f(1,i,j)=rho*vx*lor
-          f(2,i,j)=rho*vx*vx*lor**2*h+P
-          f(3,i,j)=rho*vx*vy*lor**2*h
-          f(4,i,j)=rho*vx*lor**2*h
+              lor=1/sqrt(1-(vx**2+vy**2))
+              h=1.+gamma/(gamma-1.)*P/rho
+              
+              f(1,i,j)=rho*vx*lor
+              f(2,i,j)=rho*vx*vx*lor**2*h+P
+              f(3,i,j)=rho*vx*vy*lor**2*h
+              f(4,i,j)=rho*vx*lor**2*h
 
-          g(1,i,j)=rho*vy*lor
-          g(2,i,j)=rho*vx*vy*lor**2*h
-          g(3,i,j)=rho*vy*vy*lor**2*h+P
-          g(4,i,j)=rho*vy*lor**2*h
+              g(1,i,j)=rho*vy*lor
+              g(2,i,j)=rho*vx*vy*lor**2*h
+              g(3,i,j)=rho*vy*vy*lor**2*h+P
+              g(4,i,j)=rho*vy*lor**2*h
 
-         ! print*,g
+             ! print*,g
 
-        end do
-      end do
+            end do
+          end do
 
       endif
 
@@ -675,7 +668,7 @@
            u(:,:,0   )=u(:,:,1 )
            u(:,:,ny+1)=u(:,:,ny)
 
-         do j=0,ny
+         do j=1,ny
             if (abs(j-ny/2) <= ny/20)  then
               u(1,0,j)=rhoj
               u(2,0,j)=rhoj*vxj
@@ -731,6 +724,7 @@ subroutine RL(nx,ny, neq, gamma, u, rho_l,rho_d, rho_r,rho_u, vx_l,vx_d, vx_r,vx
   vy_l,vy_r,vy_u, vy_d,P_l,P_d, P_r,P_u)
   !Este modulo, digamos es para seleccionar, las densidades, velocidades y presiones tanto de izquierda como de derecha
   !Tambien sirve como desacoplamiento para mis primitivas
+  use globals, only: relativity, qu, qpp, qp
   implicit none
   integer, intent(in) :: nx,ny,neq
   real, intent(in) :: gamma
@@ -739,6 +733,8 @@ subroutine RL(nx,ny, neq, gamma, u, rho_l,rho_d, rho_r,rho_u, vx_l,vx_d, vx_r,vx
   real, intent(out):: vx_l(0:nx+1,0:ny+1), vx_r(0:nx+1,0:ny+1), vx_u(0:nx+1,0:ny+1), vx_d(0:nx+1,0:ny+1)
   real, intent(out):: vy_l(0:nx+1,0:ny+1), vy_r(0:nx+1,0:ny+1), vy_u(0:nx+1,0:ny+1), vy_d(0:nx+1,0:ny+1)
   real, intent(out):: P_l(0:nx+1, 0:ny+1), P_r(0:nx+1, 0:ny+1), P_u(0:nx+1,0:ny+1), P_d(0:nx+1,0:ny+1)
+
+  !real, parameter ::
   integer :: i,j
 
 
@@ -746,32 +742,84 @@ subroutine RL(nx,ny, neq, gamma, u, rho_l,rho_d, rho_r,rho_u, vx_l,vx_d, vx_r,vx
 !Tuve que convertir mis variables primitivas en vectores para tener un mejor control de lo que toca derecha a izquirda,
 ! no se si es lo mej
 ! notar que corre de 0 a nx 
-  do i=1,nx
-    do j=1,ny  
-    rho_l(i,j)= u(1,i-1,j)
-    vx_l(i,j) = u(2,i-1,j)/u(1,i-1,j)
-    vy_l(i,j) = u(3,i-1, j)/u(1,i-1,j)
-    P_l(i,j)  = (u(4,i-1,j)-0.5*rho_l(i,j)*(vx_l(i,j)**2+vy_l(i,j)**2))*(gamma-1.)
-
-    rho_d(i,j)= u(1,i,j-1)
-    vx_d(i,j) = u(2,i,j-1)/u(1,i,j-1)
-    vy_d(i,j) = u(3,i,j-1)/u(1,i,j-1)
-    P_d(i,j)  = (u(4,i,j-1)-0.5*rho_d(i,j)*(vx_d(i,j)**2+vy_d(i,j)**2))*(gamma-1.)
-
+  
+  if(relativity==0)then
     
+    do i=1,nx
+      do j=1,ny 
+      
+      rho_l(i,j)= u(1,i-1,j)
+      vx_l(i,j) = u(2,i-1,j)/u(1,i-1,j)
+      vy_l(i,j) = u(3,i-1, j)/u(1,i-1,j)
+      P_l(i,j)  = (u(4,i-1,j)-0.5*rho_l(i,j)*(vx_l(i,j)**2+vy_l(i,j)**2))*(gamma-1.)
 
-    rho_r(i,j)= u(1,i+1,j)
-    vx_r(i,j) = u(2,i+1,j)/u(1,i+1,j)
-    vy_r(i,j) = u(3,i+1,j)/u(1,i+1,j)
-    P_r(i,j)  = (u(4,i+1,j)-0.5*rho_r(i,j)*(vx_r(i,j)**2+vy_r(i,j)**2))*(gamma-1.)
+      rho_d(i,j)= u(1,i,j-1)
+      vx_d(i,j) = u(2,i,j-1)/u(1,i,j-1)
+      vy_d(i,j) = u(3,i,j-1)/u(1,i,j-1)
+      P_d(i,j)  = (u(4,i,j-1)-0.5*rho_d(i,j)*(vx_d(i,j)**2+vy_d(i,j)**2))*(gamma-1.)
 
-    rho_u(i,j)= u(1,i,j+1)
-    vx_u(i,j) = u(2,i,j+1)/u(1,i,j+1)
-    vy_u(i,j) = u(3,i, j+1)/u(1,i,j+1)
-    P_u(i,j)  = (u(4,i,j+1)-0.5*rho_u(i,j)*(vx_u(i,j)**2+vy_u(i,j)**2))*(gamma-1.)
-    
+      
+
+      rho_r(i,j)= u(1,i+1,j)
+      vx_r(i,j) = u(2,i+1,j)/u(1,i+1,j)
+      vy_r(i,j) = u(3,i+1,j)/u(1,i+1,j)
+      P_r(i,j)  = (u(4,i+1,j)-0.5*rho_r(i,j)*(vx_r(i,j)**2+vy_r(i,j)**2))*(gamma-1.)
+
+      rho_u(i,j)= u(1,i,j+1)
+      vx_u(i,j) = u(2,i,j+1)/u(1,i,j+1)
+      vy_u(i,j) = u(3,i, j+1)/u(1,i,j+1)
+      P_u(i,j)  = (u(4,i,j+1)-0.5*rho_u(i,j)*(vx_u(i,j)**2+vy_u(i,j)**2))*(gamma-1.)
+      
+      end do
     end do
-  end do
+
+  elseif(relativity ==1)then
+
+
+    do i=1,nx
+      do j=1,ny
+
+         qu(1) = u(1,i,j)
+         qu(2) = u(2,i,j)
+         qu(3) = u(3,i,j)
+         qu(4) = u(4,i,j)
+
+         call uprim(qu,qp)
+
+         qpp(:,i,j)=qp
+
+        !lor=1/sqrt(1-(vx**2+vy**2))
+
+        rho_l(i,j)= qpp(1,i-1,j)
+        vx_l(i,j) = qpp(2,i-1,j)
+        vy_l(i,j) = qpp(3,i-1,j)
+        P_l(i,j)  = qpp(4,i-1,j)
+
+        rho_d(i,j)= qpp(1,i,j-1)
+        vx_d(i,j) = qpp(2,i,j-1)
+        vy_d(i,j) = qpp(3,i,j-1)
+        P_d(i,j)  = qpp(4,i,j-1)
+
+        
+
+        rho_r(i,j)= qpp(1,i+1,j)
+        vx_r(i,j) = qpp(2,i+1,j)
+        vy_r(i,j) = qpp(3,i+1,j)
+        P_r(i,j)  = qpp(4,i+1,j)
+
+        rho_u(i,j)= qpp(1,i,j+1)
+        vx_u(i,j) = qpp(2,i,j+1)
+        vy_u(i,j) = qpp(3,i,j+1)
+        P_u(i,j)  = qpp(4,i,j+1)
+
+      end do
+     end do
+
+
+
+
+
+  endif
   
 
   
@@ -846,6 +894,9 @@ end subroutine RL
      real :: vy_l(0:nx+1,0:ny+1), vy_r(0:nx+1,0:ny+1), vy_u(0:nx+1,0:ny+1), vy_d(0:nx+1,0:ny+1)
      real :: P_l(0:nx+1, 0:ny+1), P_r(0:nx+1, 0:ny+1), P_u(0:nx+1,0:ny+1), P_d(0:nx+1,0:ny+1)
 
+     real :: lor_l(0:nx+1, 0:ny+1), lor_r(0:nx+1, 0:ny+1), lor_u(0:nx+1, 0:ny+1), lor_d(0:nx+1, 0:ny+1)
+     real :: h_l(0:nx+1,0:ny+1), h_r(0:nx+1,0:ny+1), h_u(0:nx+1,0:ny+1), h_d(0:nx+1,0:ny+1)
+
      real ::s_l(0:nx+1,0:ny+1),s_r(0:nx+1,0:ny+1), s_d(0:nx+1,0:ny+1), s_u(0:nx+1,0:ny+1)
     
      
@@ -863,68 +914,144 @@ end subroutine RL
 
     
 !       !igual calculamos los flujos y conservadas de lado derecho e izquierdo
-   do i=1,nx
-    do j=1,ny
 
-       u_l(1,i,j) = rho_l(i,j)
-       u_l(2,i,j) = rho_l(i,j)*vx_l(i,j)
-       u_l(3,i,j) = rho_l(i,j)*vy_l(i,j)
-       u_l(4,i,j) = 0.5*rho_l(i,j)*(vx_l(i,j)**2+vy_l(i,j)**2)+P_l(i,j)/(gamma-1.)
+  if(relativity==0)then
+
+       do i=1,nx
+        do j=1,ny
 
 
-       u_d(1,i,j) = rho_d(i,j)
-       u_d(2,i,j) = rho_d(i,j)*vx_d(i,j)
-       u_d(3,i,j) = rho_d(i,j)*vy_d(i,j)
-       u_d(4,i,j) = 0.5*rho_d(i,j)*(vx_d(i,j)**2+vy_d(i,j)**2)+P_d(i,j)/(gamma-1.)
+           u_l(1,i,j) = rho_l(i,j)
+           u_l(2,i,j) = rho_l(i,j)*vx_l(i,j)
+           u_l(3,i,j) = rho_l(i,j)*vy_l(i,j)
+           u_l(4,i,j) = 0.5*rho_l(i,j)*(vx_l(i,j)**2+vy_l(i,j)**2)+P_l(i,j)/(gamma-1.)
 
 
-       u_r(1,i,j) = rho_r(i,j)
-       u_r(2,i,j) = rho_r(i,j)*vx_r(i,j)
-       u_r(3,i,j) = rho_r(i,j)*vy_r(i,j)
-       u_r(4,i,j) = 0.5*rho_r(i,j)*(vx_r(i,j)**2+vy_r(i,j)**2)+P_r(i,j)/(gamma-1.)
+           u_d(1,i,j) = rho_d(i,j)
+           u_d(2,i,j) = rho_d(i,j)*vx_d(i,j)
+           u_d(3,i,j) = rho_d(i,j)*vy_d(i,j)
+           u_d(4,i,j) = 0.5*rho_d(i,j)*(vx_d(i,j)**2+vy_d(i,j)**2)+P_d(i,j)/(gamma-1.)
 
 
-       u_u(1,i,j) = rho_u(i,j)
-       u_u(2,i,j) = rho_u(i,j)*vx_u(i,j)
-       u_u(3,i,j) = rho_u(i,j)*vy_u(i,j)
-       u_u(4,i,j) = 0.5*rho_u(i,j)*(vx_u(i,j)**2+vy_u(i,j)**2)+P_u(i,j)/(gamma-1.)
-
-      
+           u_r(1,i,j) = rho_r(i,j)
+           u_r(2,i,j) = rho_r(i,j)*vx_r(i,j)
+           u_r(3,i,j) = rho_r(i,j)*vy_r(i,j)
+           u_r(4,i,j) = 0.5*rho_r(i,j)*(vx_r(i,j)**2+vy_r(i,j)**2)+P_r(i,j)/(gamma-1.)
 
 
-!========================================================
+           u_u(1,i,j) = rho_u(i,j)
+           u_u(2,i,j) = rho_u(i,j)*vx_u(i,j)
+           u_u(3,i,j) = rho_u(i,j)*vy_u(i,j)
+           u_u(4,i,j) = 0.5*rho_u(i,j)*(vx_u(i,j)**2+vy_u(i,j)**2)+P_u(i,j)/(gamma-1.)
 
-       f_l(1,i,j) = rho_l(i,j)*vx_l(i,j)
-       f_l(2,i,j) = rho_l(i,j)*vx_l(i,j)**2+P_l(i,j)
-       f_l(3,i,j) = rho_l(i,j)*vx_l(i,j)*vy_l(i,j)
-       f_l(4,i,j) = vx_l(i,j)*(u_l(4,i,j)+P_l(i,j))
-
-       
-
-       f_r(1,i,j) = rho_r(i,j)*vx_r(i,j)
-       f_r(2,i,j) = rho_r(i,j)*vx_r(i,j)**2+P_r(i,j)
-       f_r(3,i,j) = rho_r(i,j)*vx_r(i,j)*vy_r(i,j)
-       f_r(4,i,j) = vx_r(i,j)*(u_r(4,i,j)+P_r(i,j))
+          
 
 
-       g_d(1,i,j) = rho_d(i,j)*vy_d(i,j)
-       g_d(2,i,j) = rho_d(i,j)*vx_d(i,j)*vy_d(i,j)
-       g_d(3,i,j) = rho_d(i,j)*vy_d(i,j)**2 + P_d(i,j)
-       g_d(4,i,j) = vy_d(i,j)*(u_d(4,i,j)+P_d(i,j))
+    !========================================================
+
+           f_l(1,i,j) = rho_l(i,j)*vx_l(i,j)
+           f_l(2,i,j) = rho_l(i,j)*vx_l(i,j)**2+P_l(i,j)
+           f_l(3,i,j) = rho_l(i,j)*vx_l(i,j)*vy_l(i,j)
+           f_l(4,i,j) = vx_l(i,j)*(u_l(4,i,j)+P_l(i,j))
+
+           
+
+           f_r(1,i,j) = rho_r(i,j)*vx_r(i,j)
+           f_r(2,i,j) = rho_r(i,j)*vx_r(i,j)**2+P_r(i,j)
+           f_r(3,i,j) = rho_r(i,j)*vx_r(i,j)*vy_r(i,j)
+           f_r(4,i,j) = vx_r(i,j)*(u_r(4,i,j)+P_r(i,j))
 
 
-       g_u(1,i,j) = rho_u(i,j)*vy_u(i,j)
-       g_u(2,i,j) = rho_u(i,j)*vx_u(i,j)*vy_u(i,j)
-       g_u(3,i,j) = rho_u(i,j)*vy_u(i,j)**2 + P_u(i,j)
-       g_u(4,i,j) = vy_u(i,j)*(u_u(4,i,j)+P_u(i,j))
+           g_d(1,i,j) = rho_d(i,j)*vy_d(i,j)
+           g_d(2,i,j) = rho_d(i,j)*vx_d(i,j)*vy_d(i,j)
+           g_d(3,i,j) = rho_d(i,j)*vy_d(i,j)**2 + P_d(i,j)
+           g_d(4,i,j) = vy_d(i,j)*(u_d(4,i,j)+P_d(i,j))
 
-!      
-!       ! Estas conservadas nos sirven para calcular el fhll
-       
 
-!       
-    end do
-  end do
+           g_u(1,i,j) = rho_u(i,j)*vy_u(i,j)
+           g_u(2,i,j) = rho_u(i,j)*vx_u(i,j)*vy_u(i,j)
+           g_u(3,i,j) = rho_u(i,j)*vy_u(i,j)**2 + P_u(i,j)
+           g_u(4,i,j) = vy_u(i,j)*(u_u(4,i,j)+P_u(i,j))
+
+    !      
+    !       ! Estas conservadas nos sirven para calcular el fhll
+           
+
+    !       
+        end do
+      end do
+
+elseif(relativity==1)then
+
+      do i=1,nx
+        do j=1,ny
+
+           lor_l(i,j) = 1/sqrt(1-(vx_l(i,j)**2+vy_l(i,j)**2))
+           lor_d(i,j) = 1/sqrt(1-(vx_d(i,j)**2+vy_d(i,j)**2))
+           lor_r(i,j) = 1/sqrt(1-(vx_r(i,j)**2+vy_r(i,j)**2))
+           lor_u(i,j) = 1/sqrt(1-(vx_u(i,j)**2+vy_u(i,j)**2))
+
+           h_l(i,j)=1.+gamma/(gamma-1.)*P_l(i,j)/rho_l(i,j)
+           h_d(i,j)=1.+gamma/(gamma-1.)*P_d(i,j)/rho_d(i,j)
+           h_r(i,j)=1.+gamma/(gamma-1.)*P_r(i,j)/rho_r(i,j)
+           h_u(i,j)=1.+gamma/(gamma-1.)*P_u(i,j)/rho_u(i,j)
+
+
+
+           u_l(1,i,j) = rho_l(i,j)*lor_l(i,j)
+           u_l(2,i,j) = rho_l(i,j)*vx_l(i,j)*lor_l(i,j)**2*h_l(i,j)
+           u_l(3,i,j) = rho_l(i,j)*vy_l(i,j)*lor_l(i,j)**2*h_l(i,j)
+           u_l(4,i,j) = rho_l(i,j)*lor_l(i,j)**2*h_l(i,j)-P_l(i,j)
+
+
+           u_d(1,i,j) = rho_d(i,j)*lor_d(i,j)
+           u_d(2,i,j) = rho_d(i,j)*vx_d(i,j)*lor_d(i,j)**2*h_d(i,j)
+           u_d(3,i,j) = rho_d(i,j)*vy_d(i,j)*lor_d(i,j)**2*h_d(i,j)
+           u_d(4,i,j) = rho_d(i,j)*lor_d(i,j)**2*h_d(i,j)-P_d(i,j)
+
+
+           u_r(1,i,j) = rho_r(i,j)*lor_r(i,j)
+           u_r(2,i,j) = rho_r(i,j)*vx_r(i,j)*lor_r(i,j)**2*h_r(i,j)
+           u_r(3,i,j) = rho_r(i,j)*vy_r(i,j)*lor_r(i,j)**2*h_r(i,j)
+           u_r(4,i,j) = rho_r(i,j)*lor_r(i,j)**2*h_r(i,j)-P_r(i,j)
+
+           u_u(1,i,j) = rho_u(i,j)*lor_u(i,j)
+           u_u(2,i,j) = rho_u(i,j)*vx_u(i,j)*lor_u(i,j)**2*h_u(i,j)
+           u_u(3,i,j) = rho_u(i,j)*vy_u(i,j)*lor_u(i,j)**2*h_u(i,j)
+           u_u(4,i,j) = rho_u(i,j)*lor_u(i,j)**2*h_u(i,j)-P_u(i,j)
+
+
+!==========================================================================
+ 
+          f_l(1,i,j) = rho_l(i,j)*vx_l(i,j)*lor_l(i,j)
+          f_l(2,i,j) = rho_l(i,j)*vx_l(i,j)**2*lor_l(i,j)**2*h_l(i,j)+P_l(i,j)
+          f_l(3,i,j) = rho_l(i,j)*vx_l(i,j)*vy_l(i,j)*lor_l(i,j)**2*h_l(i,j)
+          f_l(4,i,j) = rho_l(i,j)*vx_l(i,j)*lor_l(i,j)**2*h_l(i,j)
+
+          f_r(1,i,j) = rho_r(i,j)*vx_r(i,j)*lor_r(i,j)
+          f_r(2,i,j) = rho_r(i,j)*vx_r(i,j)**2*lor_r(i,j)**2*h_r(i,j)+P_r(i,j)
+          f_r(3,i,j) = rho_r(i,j)*vx_r(i,j)*vy_r(i,j)*lor_r(i,j)**2*h_r(i,j)
+          f_r(4,i,j) = rho_r(i,j)*vx_r(i,j)*lor_r(i,j)**2*h_r(i,j)
+
+
+          g_d(1,i,j) = rho_d(i,j)*vy_d(i,j)*lor_d(i,j)
+          g_d(2,i,j) = rho_d(i,j)*vx_d(i,j)*vy_d(i,j)*lor_d(i,j)**2*h_d(i,j)
+          g_d(3,i,j) = rho_d(i,j)*vy_d(i,j)**2*lor_d(i,j)**2*h_d(i,j)+P_d(i,j)
+          g_d(4,i,j) = rho_d(i,j)*vy_d(i,j)*lor_d(i,j)**2*h_d(i,j)
+
+          g_u(1,i,j) = rho_u(i,j)*vy_u(i,j)*lor_u(i,j)
+          g_u(2,i,j) = rho_u(i,j)*vx_u(i,j)*vy_u(i,j)*lor_u(i,j)**2*h_u(i,j)
+          g_u(3,i,j) = rho_u(i,j)*vy_u(i,j)**2*lor_u(i,j)**2*h_u(i,j)+P_u(i,j)
+          g_u(4,i,j) = rho_u(i,j)*vy_u(i,j)*lor_u(i,j)**2*h_u(i,j)
+
+
+        end do
+      end do
+
+           
+
+
+endif
 
 
      do i=1,nx

@@ -60,7 +60,7 @@
 ! 0.0 = open boundary conditions
 ! 10.0 = Jet injection
 !--------------------------------------
-      real, parameter :: bound=0.0
+      real, parameter :: bound=10.0
 
 !------------------------------------------------------------------------------
 !   This is a vector that contains u(x,y) (do not touch)
@@ -143,7 +143,7 @@
           y=float(j)*dy          ! obtain the position $y_j$
          rad=abs(sqrt((x-xc)**2+(y-yc)**2))
 
-          if (rad < 2.) then
+          if (rad < 0.) then
            
             lorin=1/sqrt(1-(vxin**2+vyin**2))
             hin=1.+gamma/(gamma-1.)*pin/rhoin
