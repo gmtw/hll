@@ -61,7 +61,7 @@
 ! Lax-Friederich = 1
 ! Harten-Lax-van-Leer = 2
 !--------------------------------------
-     integer, parameter :: choose_f = 1
+     integer, parameter :: choose_f = 2
 !-----------------------------------------------------------------------------
 !Mode relativistic
 !Relativistic = 1
@@ -535,13 +535,14 @@
 ! Boundary conditions module
 !------------------------------------------------------------------------------
       subroutine boundaries(nx,ny,neq,u,time,gamma,bound)
+      use globals, only : relativity
       implicit none
       integer, intent(in) :: nx,ny,neq
       real, intent(in) :: bound
       real, intent(out) ::u(neq,0:nx+1,0:ny+1)
       real, intent(in) :: time,gamma
       integer :: j , i
-      real :: rhoj ,vj, vxj,vyj, Pj, Tauj , rhoi, vi, Pi, Taui, theta
+      real :: rhojet , vjet, Pjet, Taujet , rhoijet, theta, lorjet, hjet, vxjet, vyjet
 
 !------------------------------------------------------------------------------
 ! Periodic or open boundaries, or your own boundary condition
@@ -654,12 +655,12 @@
 !  Jet injection
 !---------------------------------------
          if(bound.eq.10.)then
-           rhoj=9.5
-           Tauj=100.2
-           vj=0.5 !+ 0.3*sin(2*3.1416*time/Tauj)
-           vxj=0.99
-           vyj=0.1
-           Pj=0.1     !0.1
+           rhojet=40.5
+           Taujet=100.2
+           vjet=0.5 !+ 0.3*sin(2*3.1416*time/Tauj)
+           vxjet=0.99
+           vyjet=0.10
+           Pjet=0.1     !0.1
            theta=50
 
 
@@ -668,47 +669,77 @@
            u(:,:,0   )=u(:,:,1 )
            u(:,:,ny+1)=u(:,:,ny)
 
-         do j=1,ny
-            if (abs(j-ny/2) <= ny/20)  then
-              u(1,0,j)=rhoj
-              u(2,0,j)=rhoj*vxj
+          if(relativity==0)then
+             do j=1,ny
+                if (abs(j-ny/2) <= ny/20)  then
+                  u(1,0,j)=rhojet
+                  u(2,0,j)=rhojet*vxjet
+                  if((j-ny/2).ge.0)then
+                    u(3,0,j)=-rhojet*vyjet
+                  else
+                    u(3,0,j)=rhojet*vyjet
+                  end if
+                  u(4,0,j)=0.5*rhojet*(vxjet**2+vyjet**2) + Pjet/(gamma-1.)
+                end if
+              end do
+
+                !u(:,0   ,:)=u(:,1 ,:)
+                !u(:,nx+1,:)=u(:,nx,:)
+                !u(:,:,0   )=u(:,:,1 )
+                !u(:,:,ny+1)=u(:,:,ny)
+
+              ! do j=1,nx
+              !    if (abs(j-nx/2) <= nx/20)  then
+              !      u(1,j,0)=rhoj
+                   
+              !      if((j-nx/2).ge.0)then
+                   
+              !        u(2,j,0)= -rhoj*vxj     !*COS(45*3.14*time/180)
+                   
+              !      else
+              !        u(2,j,0)=  rhoj*vxj   !*COS(45*3.14*time/180)
+                   
+              !      end if
+                   
+
+              !      u(3,j,0)= rhoj*vyj   !*sin(45*3.14*time/180)
+                   
+              !      u(4,j,0)=0.5*rhoj*(vxj**2+vyj**2) + Pj/(gamma-1.)
+              !    end if
+              !  end do
+
+              !   u(:,nx+1,:)=u(:,nx,:)
+                !u(:,:,0   )=u(:,:,1 )
+                !u(:,:,ny+1)=u(:,:,ny)
+          elseif(relativity==1)then
+
+            do j=0,ny
+           
+            lorjet=1/sqrt(1-(vxjet**2+vyjet**2))
+            hjet=1.+gamma/(gamma-1.)*Pjet/rhojet
+
+           if(abs(j-ny/2) <= ny/20) then
+            
+            u(1,0,j)=rhojet*lorjet
+
+            u(2,0,j)=rhojet*vxjet*lorjet**2*hjet!*abs(COS(2*3.14*time/Taujet)
+              
               if((j-ny/2).ge.0)then
-                u(3,0,j)=rhoj*vyj
+               
+                u(3,0,j) =-rhojet*vyjet*lorjet**2*hjet!*COS(2*3.14*time/Taujet)
               else
-                u(3,0,j)=rhoj*vyj
+
+                u(3,0,j) = rhojet*vyjet*lorjet**2*hjet!*COS(2*3.14*time/Taujet)
               end if
-              u(4,0,j)=0.5*rhoj*(vxj**2+vyj**2) + Pj/(gamma-1.)
-            end if
+            
+
+            u(4,0,j)=rhojet*lorjet**2*hjet-Pjet
+           end if
+
           end do
 
-            !u(:,0   ,:)=u(:,1 ,:)
-            !u(:,nx+1,:)=u(:,nx,:)
-            !u(:,:,0   )=u(:,:,1 )
-            !u(:,:,ny+1)=u(:,:,ny)
 
-          ! do j=1,nx
-          !    if (abs(j-nx/2) <= nx/20)  then
-          !      u(1,j,0)=rhoj
-               
-          !      if((j-nx/2).ge.0)then
-               
-          !        u(2,j,0)= -rhoj*vxj     !*COS(45*3.14*time/180)
-               
-          !      else
-          !        u(2,j,0)=  rhoj*vxj   !*COS(45*3.14*time/180)
-               
-          !      end if
-               
-
-          !      u(3,j,0)= rhoj*vyj   !*sin(45*3.14*time/180)
-               
-          !      u(4,j,0)=0.5*rhoj*(vxj**2+vyj**2) + Pj/(gamma-1.)
-          !    end if
-          !  end do
-
-          !   u(:,nx+1,:)=u(:,nx,:)
-            !u(:,:,0   )=u(:,:,1 )
-            !u(:,:,ny+1)=u(:,:,ny)                                                                                                                                                                                                                                                                                                         
+          endif                                                                                                                                                                                                                                                                                                     
 
 
          end if

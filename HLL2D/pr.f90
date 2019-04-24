@@ -32,8 +32,8 @@
       real, parameter :: ymax=6., dy=ymax/float(ny)
       real, parameter :: gamma=4./3.
 
-      real, parameter :: tmax= 2.0        ! maximum integration time
-      real, parameter :: dtprint=0.1       ! interval between outputs
+      real, parameter :: tmax= 7.0        ! maximum integration time
+      real, parameter :: dtprint=tmax/20.       ! interval between outputs
 
       real, parameter :: rhoin = 10.0
       real, parameter :: rhoout = 2.0 !density
@@ -573,7 +573,7 @@
            rhojet=40.5
            Taujet=0.5
            vxjet=0.9909 !+ 0.3*sin(2*3.1416*time/Tauj)
-           vyjet=0.123
+           vyjet=0.001
            Pjet=0.1     !0.1
            theta=50
 
